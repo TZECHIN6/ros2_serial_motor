@@ -7,20 +7,22 @@
 
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import UInt8MultiArray, Float32
-
+from std_msgs.msg import UInt8MultiArray
+from tier4_vehicle_msgs.msg import ActuationCommandStamped
 import struct
+import math
 
 class DummyPublisher(Node):
 
     def __init__(self):
         super().__init__('dummy_publisher')
-        self.target_steer = 0.0
+        self.tire_angle_deg = 0.0
+        self.steer_ratio = 16.48571
 
         self.publisher_ = self.create_publisher(UInt8MultiArray, '/serial_write', 10)
-        self.subscription_ = self.create_subscription(Float32, '/tester/steer', self.steer_callback, 1)
-        self.subscription_
-        timer_period = 0.1  # [s]
+        self.actuation_cmd_subscription_ = self.create_subscription(ActuationCommandStamped, '/control/command/actuation_cmd', self.steer_callback, 1)
+        self.actuation_cmd_subscription_
+        timer_period = 1/30  # [s]
         self.timer = self.create_timer(timer_period, self.timer_callback)
 
     def calculate_crc16(self, data: list[int]):
@@ -35,15 +37,19 @@ class DummyPublisher(Node):
         crc_bytes = bytes([(crc & 0xFF), ((crc >> 8) & 0xFF)])
         return crc_bytes
 
-    def steer_callback(self, msg: Float32):
-        self.target_steer = msg.data
-        print(f"Set target steer: {self.target_steer}")
+    def steer_callback(self, msg: ActuationCommandStamped):
+        self.tire_angle_deg = math.degrees(msg.actuation.steer_cmd)
+
+    def tire_to_steer_convert(self, tire_angle_deg: float) -> float:
+        target_steer = tire_angle_deg * self.steer_ratio
+        return target_steer
 
     def timer_callback(self):
         msg_steer = UInt8MultiArray()
-        angle_to_pulse = int(abs(self.target_steer)/360 * 51200)  # 51200 pulse for 1 revolution.
+        target_steer = self.tire_to_steer_convert(self.tire_angle_deg)
+        angle_to_pulse = int(abs(target_steer)/360 * 51200)  # 51200 pulse for 1 revolution.
         byte_cap_angle_to_pulse = struct.pack('!I', min(angle_to_pulse, 0xFFFFFF))[-3:]  # Max: 0xFFFFFF -> 16777215
-        if self.target_steer >= 0:
+        if target_steer >= 0:
             steer_direction_data = 0x00
         else:
             steer_direction_data = 0x80
@@ -53,6 +59,7 @@ class DummyPublisher(Node):
         msg_steer.data = steer_cmd_data + steer_angle_data + crc
         # msg_steer.data = [0x01, 0x10, 0x00, 0x2B, 0x00, 0x02, 0x04, 0x00, 0x00, 0xC8, 0x00, 0xE7, 0xC4]  # Test command (1 complete revolution)
         self.publisher_.publish(msg_steer)
+        self.get_logger().info(f'Target steer: "{target_steer}"')
         self.get_logger().info(f'Publishing: "{msg_steer.data}"')
 
 
