@@ -11,7 +11,7 @@ def calculate_crc16(data: list[int]):
         return crc_bytes
 
 def main():
-     data = [0x01, 0x03, 0x00, 0x26, 0x00, 0x01]
+     data = [0x01, 0x03, 0x00, 0x21, 0x00, 0x01]
      crc = calculate_crc16(data)
      print(f'crc: {crc}')
      print('done')
