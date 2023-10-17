@@ -20,6 +20,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
+            'steer_publisher = dummy_node.steer_publisher:main',
             'dummy_publisher = dummy_node.dummy_publisher:main',
         ],
     },
