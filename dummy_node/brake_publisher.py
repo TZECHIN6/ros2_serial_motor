@@ -63,7 +63,7 @@ class BrakePublisher(Node):
         Assume the applied brake pressure is linear to the piston linear travel distance.
         """
         msg_brake = UInt8MultiArray()
-        required_motor_steps = min(int((self.max_brake_travel_distance * self.brake_cmd) / self.linear_travel_per_step), self.max_steps)
+        required_motor_steps = min(int((self.max_brake_travel_distance * (1 - self.brake_cmd)) / self.linear_travel_per_step), self.max_steps)
         required_motor_pulses = int(abs(required_motor_steps * self.step_angle) / 360 * 51200)
         byte_cap_angle_to_pulse = struct.pack('!I', min(required_motor_pulses, 0xFFFFFF))[-3:]  # Max: 0xFFFFFF -> 16777215
         motor_cmd_data = struct.pack('!7B', 0x01, 0x10, 0x00, 0x2B, 0x00, 0x02, 0x04)
@@ -74,7 +74,6 @@ class BrakePublisher(Node):
         self.get_logger().info(f'Required motor steps: {required_motor_steps}, Required motor pulses: {required_motor_pulses}')
         self.get_logger().info(f'Publishing: "{msg_brake.data}"')
         
-
     def timer_callback(self):
         self.brake_control_cmd()
 
