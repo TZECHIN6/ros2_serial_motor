@@ -20,7 +20,7 @@ class BrakePublisher(Node):
         self.max_brake_travel_distance = 88.9  # [mm]
         self.step_angle = 1.8  # [deg]
         self.max_steps = int(self.max_brake_travel_distance / self.linear_travel_per_step)
-        self.brake_cmd = 0.0  # Initial
+        self.brake_cmd = 1.0  # Initial: full brake
 
         self.publisher_ = self.create_publisher(UInt8MultiArray, '/serial_write', 10)
         self.actuation_cmd_subscription_ = self.create_subscription(ActuationCommandStamped, '/control/command/actuation_cmd', self.actuation_cmd_callback, 1)
